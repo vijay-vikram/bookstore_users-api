@@ -2,7 +2,7 @@ package users
 
 import (
 	"github.com/vijay-vikram/bookstore_users-api/utils/errors"
-	"net/http"
+	"strings"
 )
 
 type User struct {
@@ -14,12 +14,12 @@ type User struct {
 }
 
 func (user *User) Validate() *errors.RestErr {
+	user.FirstName = strings.TrimSpace(user.FirstName)
+	user.LastName = strings.TrimSpace(user.LastName)
+
+	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
 	if user.Email == "" {
-		return &errors.RestErr{
-			Message: "Email Address is not Valid",
-			Status:  http.StatusBadRequest,
-			Error:   "bad_request",
-		}
+		return errors.NewBadRequestError("Email Address is not Valid")
 	}
 	return nil
 }
