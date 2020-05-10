@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/vijay-vikram/bookstore_users-api/domain/users"
+	"github.com/vijay-vikram/bookstore_users-api/utils/dates"
 	"github.com/vijay-vikram/bookstore_users-api/utils/errors"
 )
 
@@ -21,6 +22,9 @@ func CreateUser(user users.User) (*users.User, *errors.RestErr) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
+
+	user.DateCreated = dates.GetNoWDbFormat()
+	user.Status = users.StatusActive
 
 	if err := user.Save(); err != nil {
 		return nil, err
@@ -58,7 +62,12 @@ func UpdateUser(user users.User, isPartial bool) (*users.User, *errors.RestErr) 
 	return currentUser, nil
 }
 
-func DeleteUser(userId int64) *errors.RestErr{
+func DeleteUser(userId int64) *errors.RestErr {
 	user := &users.User{Id: userId}
 	return user.Delete()
+}
+
+func Search(status string) ([]users.User, *errors.RestErr) {
+	dao := &users.User{}
+	return dao.FindByStatus(status)
 }
