@@ -2,6 +2,7 @@ package users
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/vijay-vikram/bookstore_oauth-go/oauth"
 	"github.com/vijay-vikram/bookstore_users-api/domain/users"
 	"github.com/vijay-vikram/bookstore_users-api/services"
 	"github.com/vijay-vikram/bookstore_users-api/utils/errors"
@@ -27,6 +28,10 @@ func Create(c *gin.Context) {
 }
 
 func Get(c *gin.Context) {
+	if err := oauth.AuthenticateRequest(c.Request); err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
 	userId, userIdError := getUserId(c.Param("user_id"))
 	if userIdError != nil {
 		c.JSON(userIdError.Status, userIdError)
@@ -38,7 +43,13 @@ func Get(c *gin.Context) {
 		c.JSON(getErr.Status, getErr)
 		return
 	}
-	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-Public") == "true"))
+
+	if oauth.GetCallerId(c.Request) == user.Id {
+		c.JSON(http.StatusOK, user.Marshall(false))
+		return
+	}
+
+	c.JSON(http.StatusOK, user.Marshall(oauth.IsPublic(c.Request)))
 }
 
 func Update(c *gin.Context) {
@@ -100,4 +111,21 @@ func getUserId(userIdParam string) (int64, *errors.RestErr) {
 		return 0, errors.NewBadRequestError("User Id should be a Integer")
 	}
 	return userId, nil
+}
+
+func Login(c *gin.Context) {
+	var request users.LoginRequest
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		restErr := errors.NewBadRequestError("Invalid json body")
+		c.JSON(restErr.Status, restErr)
+		return
+	}
+
+	user, saveErr := services.UsersService.LoginUser(request)
+	if saveErr != nil {
+		c.JSON(saveErr.Status, saveErr)
+		return
+	}
+	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("X-Public") == "true"))
 }
